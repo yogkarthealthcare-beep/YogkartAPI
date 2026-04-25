@@ -12,6 +12,8 @@ const categoryRoutes  = require('./routes/category.routes');
 const orderRoutes     = require('./routes/order.routes');
 const wishlistRoutes  = require('./routes/wishlist.routes');
 
+const paymentRoutes = require('./routes/payments.routes');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -83,6 +85,10 @@ app.use((err, req, res, next) => {
       : err.message,
   });
 });
+
+// ── Graceful Shutdown ─────────────────────────────────
+// app.js (existing other routes ke neeche)
+app.use('/api/payments', paymentRoutes);
 
 // ── Start Server ───────────────────────────────────────
 const start = async () => {
