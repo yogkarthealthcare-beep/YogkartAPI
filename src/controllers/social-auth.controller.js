@@ -1,52 +1,53 @@
-// ── POST /api/auth/social-login ────────────────────────────────────────────
-// Google / Facebook / LinkedIn social login handler
-// Ek hi endpoint — email exist kare to login, nahi to register + login
-//
-// Request body:
-//   { name, email, provider, avatar, uid }
-//
-// Response: same as /api/auth/login
-// ───────────────────────────────────────────────────────────────────────────
+/**
+ * ============================================================
+ * Social Auth Controller — Google · Facebook · LinkedIn
+ * ============================================================
+ * POST /api/auth/social-login
+ * Body: { name, email, provider, avatar, uid }
+ *
+ * Email exist kare → login
+ * Nahi kare        → register + welcome email + login
+ * ============================================================
+ */
 
+const bcrypt        = require('bcryptjs');
+const { query }     = require('../config/database');
+const { generateAccessToken, generateRefreshToken, saveRefreshToken } = require('../utils/jwt');
+const { sendEmail } = require('../utils/email.service');
+const { success, badRequest, error } = require('../utils/response');
+
+// ── POST /api/auth/social-login ──────────────────────────────────────────────
 const socialLogin = async (req, res) => {
   try {
     const { name, email, provider, avatar, uid } = req.body;
 
-    if (!email || !name) {
-      return badRequest(res, 'Name and email are required');
-    }
+    if (!email || !name) return badRequest(res, 'Name and email are required');
 
-    // ── Step 1: Email exist karta hai? ──────────────────────────────────────
+    // ── Step 1: Email exist karta hai? ─────────────────────────────────────
     const exists = await query(
       'SELECT * FROM users WHERE email = $1 AND is_active = TRUE',
       [email.toLowerCase().trim()]
     );
 
     let user;
+    let isNewUser = false;
 
     if (exists.rows.length > 0) {
-      // ── CASE A: Purana user — seedha login karo ───────────────────────────
+      // CASE A: Purana user — seedha login
       user = exists.rows[0];
-
-      // Avatar update karo agar pehla nahi tha
       if (avatar && !user.avatar) {
-        await query(
-          'UPDATE users SET avatar = $1 WHERE id = $2',
-          [avatar, user.id]
-        );
+        await query('UPDATE users SET avatar = $1 WHERE id = $2', [avatar, user.id]);
         user.avatar = avatar;
       }
-
     } else {
-      // ── CASE B: Naya user — register karo ────────────────────────────────
-      // Social users ke liye random secure password generate karo
-      // (User kabhi directly use nahi karega — forgot password se change kar sakta hai)
+      // CASE B: Naya user — register
+      isNewUser = true;
       const randomPassword = `Yk@${uid ? uid.slice(0, 8) : Math.random().toString(36).slice(2, 10)}#9${Date.now().toString(36)}`;
-      const passwordHash = await bcrypt.hash(randomPassword, parseInt(process.env.BCRYPT_ROUNDS) || 12);
+      const passwordHash   = await bcrypt.hash(randomPassword, parseInt(process.env.BCRYPT_ROUNDS) || 12);
 
       const result = await query(
-        `INSERT INTO users (name, email, phone, password_hash, avatar, provider)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO users (name, email, phone, password_hash, avatar, provider, is_verified)
+         VALUES ($1, $2, $3, $4, $5, $6, TRUE)
          RETURNING id, name, email, phone, role, avatar, created_at`,
         [
           name.trim(),
@@ -54,14 +55,17 @@ const socialLogin = async (req, res) => {
           null,
           passwordHash,
           avatar || null,
-          provider || 'google'
+          provider || 'google',
         ]
       );
-
       user = result.rows[0];
+
+      // Welcome email — async, non-blocking
+      sendEmail({ type: 'welcome', to: email, data: { name: user.name } })
+        .catch(e => console.error('Welcome email error:', e.message));
     }
 
-    // ── Step 2: Tokens generate karo ────────────────────────────────────────
+    // ── Step 2: Tokens ──────────────────────────────────────────────────────
     const accessToken  = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
     await saveRefreshToken(user.id, refreshToken);
@@ -71,13 +75,13 @@ const socialLogin = async (req, res) => {
         id:     user.id,
         name:   user.name,
         email:  user.email,
-        phone:  user.phone,
+        phone:  user.phone  || null,
         role:   user.role,
         avatar: user.avatar || null,
       },
       accessToken,
       refreshToken,
-    }, exists.rows.length > 0 ? 'Login successful' : 'Account created successfully');
+    }, isNewUser ? 'Account created successfully' : 'Login successful');
 
   } catch (err) {
     console.error('Social login error:', err);
