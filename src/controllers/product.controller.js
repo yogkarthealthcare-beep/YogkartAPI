@@ -169,9 +169,7 @@ const getCategories = async (req, res) => {
 const getFeatured = async (req, res) => {
   try {
     const result = await query(
-      `SELECT ${PRODUCT_FIELDS} FROM products p
-       WHERE p.is_active = TRUE
-       ORDER BY p.review_count DESC LIMIT 5`,
+      `SELECT ${PRODUCT_FIELDS} FROM products LIMIT 5`,
       []
     );
     return success(res, { products: result.rows });
