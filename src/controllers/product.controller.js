@@ -184,17 +184,6 @@ const getFeatured = async (req, res) => {
     return error(res, 'Failed to fetch featured products');
   }
 };
-const getFeatured1 = async (req, res) => {
-  try {
-    const result = await query(
-      `SELECT * FROM products LIMIT 5`,
-      []
-    );
-    return success(res, { products: result.rows });
-  } catch (err) {
-    return error(res, 'Failed to fetch featured products');
-  }
-};
 
 // ── GET /api/products/banners ──────────────────────────
 const getBanners = async (req, res) => {
