@@ -12,18 +12,36 @@ const categoryRoutes  = require('./routes/category.routes');
 const orderRoutes     = require('./routes/order.routes');
 const wishlistRoutes  = require('./routes/wishlist.routes');
 
-const paymentRoutes = require('./routes/payments.routes');
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ── Security Middleware ────────────────────────────────
 app.use(helmet());
+
+const allowedOrigins = [
+  'http://localhost:4200',
+  'http://localhost:3000',
+  'https://yogkart-eedb8.web.app',        // Firebase hosting
+  'https://yogkart-eedb8.firebaseapp.com', // Firebase alternate
+  'https://www.yogkart.in',               // Custom domain
+  'https://yogkart.in',                   // Custom domain (without www)
+  process.env.FRONTEND_URL,               // Render env variable
+].filter(Boolean); // null/undefined hata do
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  origin: (origin, callback) => {
+    // Postman / server-to-server (no origin) — allow
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS blocked: ${origin}`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 }));
+
+// OPTIONS preflight requests allow karo
+app.options('*', cors());
 
 // ── Rate Limiting ──────────────────────────────────────
 const globalLimiter = rateLimit({
@@ -85,10 +103,6 @@ app.use((err, req, res, next) => {
       : err.message,
   });
 });
-
-// ── Graceful Shutdown ─────────────────────────────────
-// app.js (existing other routes ke neeche)
-app.use('/api/payments', paymentRoutes);
 
 // ── Start Server ───────────────────────────────────────
 const start = async () => {
