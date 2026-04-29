@@ -169,7 +169,7 @@ const getCategories = async (req, res) => {
 const getFeatured = async (req, res) => {
   try {
     const result = await query(
-      `SELECT ${PRODUCT_FIELDS} FROM products LIMIT 5`,
+      `SELECT * FROM products LIMIT 5`,
       []
     );
     return success(res, { products: result.rows });
