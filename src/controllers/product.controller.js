@@ -166,7 +166,25 @@ const getCategories = async (req, res) => {
 };
 
 // ── GET /api/products/featured ─────────────────────────
+
 const getFeatured = async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT * FROM products 
+       ORDER BY review_count DESC, created_at DESC 
+       LIMIT 5`
+    );
+
+    console.log("FEATURED DATA:", result.rows); // debug
+
+    return success(res, result.rows); // ✅ direct data भेजो
+
+  } catch (err) {
+    console.error("FEATURED ERROR:", err);
+    return error(res, 'Failed to fetch featured products');
+  }
+};
+const getFeatured1 = async (req, res) => {
   try {
     const result = await query(
       `SELECT * FROM products LIMIT 5`,
