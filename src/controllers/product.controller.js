@@ -166,22 +166,60 @@ const getCategories = async (req, res) => {
 };
 
 // ── GET /api/products/featured ─────────────────────────
-
 const getFeatured = async (req, res) => {
   try {
-    const result = await query(
-      `SELECT * FROM products 
-       ORDER BY review_count DESC, created_at DESC 
-       LIMIT 5`
+    // Pehle is_featured = TRUE wale lo
+    let result = await query(
+      `SELECT ${PRODUCT_FIELDS} FROM products p
+       WHERE p.is_featured = TRUE AND p.is_active = TRUE
+       ORDER BY p.review_count DESC LIMIT 8`,
+      []
     );
 
-    console.log("FEATURED DATA:", result.rows); // debug
+    // Agar koi featured product nahi hai to top products lo (review_count se)
+    if (result.rows.length === 0) {
+      result = await query(
+        `SELECT ${PRODUCT_FIELDS} FROM products p
+         WHERE p.is_active = TRUE
+         ORDER BY p.review_count DESC, p.created_at DESC
+         LIMIT 8`,
+        []
+      );
+    }
 
-    return success(res, result.rows); // ✅ direct data भेजो
-
+    return success(res, result.rows);
   } catch (err) {
-    console.error("FEATURED ERROR:", err);
+    console.error('Featured error:', err);
     return error(res, 'Failed to fetch featured products');
+  }
+};
+
+// ── GET /api/products/bestsellers ──────────────────────
+const getBestSellers = async (req, res) => {
+  try {
+    // Pehle is_best_seller = TRUE wale lo
+    let result = await query(
+      `SELECT ${PRODUCT_FIELDS} FROM products p
+       WHERE p.is_best_seller = TRUE AND p.is_active = TRUE
+       ORDER BY p.review_count DESC LIMIT 8`,
+      []
+    );
+
+    // Agar koi bestseller nahi hai to top rated products lo
+    if (result.rows.length === 0) {
+      result = await query(
+        `SELECT ${PRODUCT_FIELDS} FROM products p
+         WHERE p.is_active = TRUE
+         ORDER BY p.review_count DESC, p.rating DESC
+         LIMIT 8`,
+        []
+      );
+    }
+
+    return success(res, result.rows);
+  } catch (err) {
+    console.error('Bestsellers error:', err);
+    return error(res, 'Failed to fetch bestsellers');
   }
 };
 
@@ -217,4 +255,4 @@ const getBanners = async (req, res) => {
   return success(res, { banners });
 };
 
-module.exports = { getProducts, getProduct, getRelated, getCategories, getFeatured, getBanners };
+module.exports = { getProducts, getProduct, getRelated, getCategories, getFeatured, getBestSellers, getBanners };
