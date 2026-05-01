@@ -60,6 +60,7 @@ const sendOtp = async (req, res) => {
   } catch (err) {
     console.error('sendOtp error:', err);
     return error(res, 'Failed to send OTP. Please try again.');
+    error: error.message  // ← ye add karo
   }
 };
 
