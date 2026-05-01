@@ -25,7 +25,7 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.MAIL_USER || 'yogkarthealthcare@gmail.com',
-    pass: process.env.MAIL_PASS || 'YD%7w3@xH7!SUf',   // Gmail App Password
+    pass: process.env.MAIL_PASS,  // .env mein set karo — hardcode mat karo
   },
 });
 
