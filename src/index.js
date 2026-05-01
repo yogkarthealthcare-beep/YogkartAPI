@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 3000;
 
 // ── Security Middleware ────────────────────────────────
 app.use(helmet());
-
+app.set('trust proxy', 1); // ✅ Render ke liye zaroori
 const allowedOrigins = [
   'http://localhost:4200',
   'http://localhost:3000',
